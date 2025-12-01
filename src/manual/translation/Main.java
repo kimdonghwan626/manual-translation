@@ -11,26 +11,58 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.List;
+import java.util.Properties;
 
 import manual.translation.template.PromptTemplate;
 
 public class Main {
 
-    private static final String OPENAI_API_KEY = 
-    		"";
-
     private static final String OPENAI_API_URL =
             "https://api.openai.com/v1/conversations";
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
     	
     	String root = System.getProperty("user.dir");
     	
-    	System.out.println("ROOT : " + root);
+    	System.out.println("현재 작업 경로 : " + root);
+
+    	File propFile = new File(root + File.separator + "data.properties");
+    	if(!propFile.exists()) {
+    		throw new Exception("data.properties 파일이 없습니다.");
+    	}
+    	
+    	Properties prop = FileUtils.loadProperties(root + File.separator + "data.properties");
+
+    	final String OPEN_API_KEY = prop.getProperty("OPEN_API_KEY");
+    	if(OPEN_API_KEY == null) {
+    		throw new Exception("OPEN_API_KEY가 없습니다.");
+    	}
+    	
+    	System.out.println("OPEN_API_KEY : " + OPEN_API_KEY);
+    	
+    	File contextFile = new File(root + File.separator + "context.csv");
+    	if(!contextFile.exists()) {
+    		throw new Exception("context.csv 파일이 없습니다.");
+    	}
+    	
+    	String contextFileContent = FileUtils.getFileContent(contextFile);
     	
     	List<File> files = FileUtils.collectAdocFiles(root);
-    	List<File> filteredFiles = FileUtils.filterNotCreatedFile(files);
     	
+    	System.out.println("모든 ADOC 파일 개수 : " + files.size());
+    	
+    	List<File> filteredFiles = FileUtils.filterNotCreatedFile(files, root);
+    	
+    	System.out.println("번역 대상 ADOC 파일 개수 : " + filteredFiles);
+    	
+    	for(File f : filteredFiles) {
+    		String koreanAdoc = FileUtils.getFileContent(f);
+    		String prompt = PromptTemplate.buildPrompt(contextFileContent, koreanAdoc);
+    		String englishAdoc = null;
+    		
+    		String newPath = FileUtils.getNewPath(f, root);
+    		FileUtils.writeFileContent(new File(newPath), englishAdoc);
+    	}
     	
         try {
             // 예: glossary.txt / manual.adoc 로컬 파일
