@@ -1,7 +1,6 @@
 package manual.translation;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +9,8 @@ import java.util.Properties;
 public class Main {
 
     public static void main(String[] args) throws Exception {
+    	
+    	System.setProperty("https.protocols", "TLSv1.2,TLSv1.3");
     	
     	String root = System.getProperty("user.dir");
     	
@@ -62,20 +63,14 @@ public class Main {
     	System.out.println("모든 ADOC 파일 개수 : " + files.size());
     	
     	GptTranslator translator = new GptTranslator(MODEL, OPENAI_API_KEY);
-    	
-    	List<String> reports = new ArrayList<>();
-
-    	int successFileCount = 0;
-    	int skipFileCount = 0;
-    	int failedFileCount = 0;
-    	long start = System.currentTimeMillis();
+    	Report report = new Report();
     	
     	for(File f : files) {
     		File newFile = Utils.getNewFile(f, SOURCE_PATH, TARGET_PATH);
 			
     		if(newFile.exists()) {
     			System.out.println(f.getAbsolutePath() + "의 영문 파일은 이미 TARGET_PATH에 존재합니다.");
-    			skipFileCount++;
+    			report.increaseSkip();
     			continue;
     		}
     		
@@ -94,25 +89,23 @@ public class Main {
     		try {
     			String englishAdoc = translator.translate(prompt);
     			
+    			if(Utils.containsKorean(englishAdoc)) {
+    				 System.out.println(f.getAbsolutePath() + "파일에 한글이 포함되어 있습니다.");
+    				report.addKoreanContainFile(f);
+    			}
+    			
     			Utils.writeFileContent(newFile, englishAdoc);
     			
     			System.out.println(f.getAbsolutePath() + " 변환 성공");
-    			successFileCount++;
+    			report.increaseSuccess();
     		}catch(Exception e) {
     			System.err.println(f.getAbsolutePath() + " 변환 실패");
-    			reports.add(f.getAbsolutePath() + " 변환 실패 -> " + e.getMessage());
-    			failedFileCount++;
+    			report.addMessage(f.getAbsolutePath() + " 변환 실패 -> " + e.getMessage());
+    			report.increaseFailed();
     		}
     	}
     	
-    	reports.add("Adoc 파일 수 : " + files.size());
-    	reports.add("성공 파일 수 : " + successFileCount);
-    	reports.add("skip 파일 수 : " + skipFileCount);
-    	reports.add("실패 파일 수 : " + failedFileCount);
-    	long end = System.currentTimeMillis();
-    	reports.add("소요 시간 : " + (end - start) + " ms");
-    	
-    	String reportContent = String.join(System.lineSeparator(), reports);
+    	String reportContent = report.generate();
     	Utils.writeFileContent(new File(root + File.separator + "report.txt"), reportContent);
     }
 }

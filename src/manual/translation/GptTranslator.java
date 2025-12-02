@@ -7,8 +7,15 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -82,13 +89,35 @@ public class GptTranslator {
 		conn.setRequestMethod("POST");
 		conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
 		conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+		conn.setRequestProperty("OpenAI-Beta", "response=v1");
 		conn.setReadTimeout(90 * 1000);
 		conn.setConnectTimeout(10 * 1000);
 		conn.setDoOutput(true);
 		
-		String body = createBody(prompt);
+		if(conn instanceof HttpsURLConnection) {
+			HttpsURLConnection _conn = (HttpsURLConnection) conn;
+			
+			SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+			sslContext.init(null, new TrustManager[] { new X509TrustManager() {
+
+				@Override
+				public X509Certificate[] getAcceptedIssuers() {
+					return null;
+				}
+
+				@Override
+				public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+				}
+
+				@Override
+				public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+					
+				}
+			} }, null);
+			_conn.setSSLSocketFactory(sslContext.getSocketFactory());
+		}
 		
-//		System.out.println("body : " + body);
+		String body = createBody(prompt);
 		
 		try(BufferedOutputStream bos = new BufferedOutputStream(conn.getOutputStream())) {
 			byte[] input = body.getBytes(StandardCharsets.UTF_8);

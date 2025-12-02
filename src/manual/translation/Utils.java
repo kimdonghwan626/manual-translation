@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 public class Utils {
 	
@@ -85,5 +86,10 @@ public class Utils {
 		}
 		
 		return newContent;
+	}
+	
+	public static boolean containsKorean(String text) {
+	    if (text == null) return false;
+	    return Pattern.compile("[ㄱ-ㅎㅏ-ㅣ가-힣]").matcher(text).find();
 	}
 }
