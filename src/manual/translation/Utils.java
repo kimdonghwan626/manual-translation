@@ -6,13 +6,13 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 
-public class FileUtils {
+public class Utils {
 	
 	public static List<File> collectAdocFiles(String root) {
 		List<File> list = new ArrayList<>();
@@ -36,44 +36,18 @@ public class FileUtils {
 		return file.getName().endsWith(".adoc");
 	}
 	
-	public static List<File> filterNotCreatedFile(List<File> files, String root) {
-		List<File> list = new ArrayList<>();
+	public static File getNewFile(File file, String sourcePath, String targetPath) {
+		String _sourcePath = sourcePath.replace("/", "\\");
+		String _targetPath = targetPath.replace("/", "\\");
 		
-		for(File f : files) {
-			File newFile = new File(getNewPath(f, root));
-			
-			if(!newFile.exists()) {
-				list.add(f);
-			}
-		}
-		
-		return list;
+		String newPath = file.getAbsolutePath().replace(_sourcePath, _targetPath);
+		return new File(newPath);
 	}
 	
-	public static String getNewPath(File file, String root) {
-		String original = file.getAbsolutePath();
-		
-		Path rootPath = Paths.get(root);
-		Path originalPath = Paths.get(original);
-		
-		Path relative = rootPath.relativize(originalPath);
-		Path newPath = rootPath.resolve("en").resolve(relative);
-		
-		return newPath.toString();
-	}
-	
-	public static Properties loadProperties(String fileName) {
+	public static Properties loadProperties(File file) {
 	    Properties props = new Properties();
 
-	    try (InputStream is =
-	            Thread.currentThread()
-	                  .getContextClassLoader()
-	                  .getResourceAsStream(fileName)) {
-
-	        if (is == null) {
-	            throw new RuntimeException("properties 파일을 찾을 수 없습니다: " + fileName);
-	        }
-
+	    try (InputStream is = new FileInputStream(file)) {
 	        props.load(is);
 	    } catch (Exception e) {
 	    	e.printStackTrace();
@@ -91,6 +65,11 @@ public class FileUtils {
 	}
 	
 	public static void writeFileContent(File file, String content) throws Exception {
+		File directory = file.getParentFile();
+		if(!directory.exists()) {
+			directory.mkdirs();
+		}
+		
 		try(OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
 			osw.write(content);
 		}catch(Exception e) {
@@ -98,8 +77,13 @@ public class FileUtils {
 		}
 	}
 	
-	public static void main(String[] args) {
-		System.out.println(File.pathSeparator);
-		System.out.println(File.separator);
+	public static String variableMapping(String content, Map<String, String> variables) {
+		String newContent = content;
+		
+		for(Entry<String, String> entry : variables.entrySet()) {
+			newContent = newContent.replace("{" + entry.getKey() + "}", entry.getValue());
+		}
+		
+		return newContent;
 	}
 }
