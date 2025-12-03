@@ -89,6 +89,9 @@ public class Main {
     		try {
     			String englishAdoc = translator.translate(prompt);
     			
+    			if(englishAdoc != null) {
+    				englishAdoc = englishAdoc.replace("image::ko", "image:en");
+    			}
     			if(Utils.containsKorean(englishAdoc)) {
     				 System.out.println(f.getAbsolutePath() + "파일에 한글이 포함되어 있습니다.");
     				report.addKoreanContainFile(f);
@@ -105,7 +108,6 @@ public class Main {
     		}
     	}
     	
-    	String reportContent = report.generate();
-    	Utils.writeFileContent(new File(root + File.separator + "report.txt"), reportContent);
+    	Utils.writeFileContent(new File(root + File.separator + "report.txt"), report.generate());
     }
 }
